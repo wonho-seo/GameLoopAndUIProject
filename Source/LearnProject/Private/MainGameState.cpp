@@ -9,15 +9,16 @@
 #include "MainPlayerController.h"
 #include "Components/TextBlock.h"
 #include "Blueprint/UserWidget.h"
+#include "WaveRow.h"
 
 AMainGameState::AMainGameState()
 {
 	Score = 0;
 	SpawnedCoinCount = 0;
 	CollectedCoinCount = 0;
-	LevelDuration = 30.0f;
 	CurrentLevelIndex = 0;
 	MaxLevels = 3;
+	CurrentWaveIndex = 0;
 }
 
 void AMainGameState::BeginPlay()
@@ -72,37 +73,78 @@ void AMainGameState::StartLevel()
 		}
 	}
 
+	StartWave();
+	
+}
+
+void AMainGameState::StartWave()
+{
 	SpawnedCoinCount = 0;
 	CollectedCoinCount = 0;
+
+	TArray<FWaveRow*> WaveRows;
+	const FString ContextString(TEXT("WaveContexts"));
+	WaveDataTable->GetAllRows(ContextString, WaveRows);
 
 	TArray<AActor*> FoundVolumes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundVolumes);
 
-	const int32 ItemToSpawn = 40;
-
-	for (int32 i = 0; i < ItemToSpawn; i++)
+	if (WaveRows.IsValidIndex(CurrentWaveIndex))
 	{
-		if (FoundVolumes.Num() > 0)
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::Printf(TEXT("Wave: %d"), CurrentWaveIndex));
+		int32 ItemToSpawn = WaveRows[CurrentWaveIndex]->SpawnCount;
+		float WaveDuration = WaveRows[CurrentWaveIndex]->WaveDuration;
+		for (int32 i = 0; i < ItemToSpawn; i++)
 		{
-			ASpawnVolume* SpawnVolume = Cast<ASpawnVolume>(FoundVolumes[0]);
-			if (SpawnVolume)
+			if (FoundVolumes.Num() > 0)
 			{
-				AActor* SpawnedActor = SpawnVolume->SpawnRandomItem();
-				if (SpawnedActor && SpawnedActor->IsA(ACoinItem::StaticClass()))
+				ASpawnVolume* SpawnVolume = Cast<ASpawnVolume>(FoundVolumes[0]);
+				if (SpawnVolume)
 				{
-					SpawnedCoinCount++;
+					AActor* SpawnedActor = SpawnVolume->SpawnRandomItem();
+					if (SpawnedActor && SpawnedActor->IsA(ACoinItem::StaticClass()))
+					{
+						SpawnedCoinCount++;
+					}
+					SpawnedItems.Add(SpawnedActor);
 				}
-
 			}
 		}
-	}
 
-	GetWorldTimerManager().SetTimer(
-		LevelTimerHandle,
-		this,
-		&AMainGameState::OnLevelTimeUp,
-		LevelDuration,
-		false);
+		GetWorldTimerManager().SetTimer(
+			WaveTimerHandle,
+			this,
+			&AMainGameState::OnWaveTimeUp,
+			WaveDuration,
+			false
+		);
+	}
+	else
+	{
+		EndLevel();
+	}
+}
+void AMainGameState::OnWaveTimeUp()
+{
+	EndWave();
+	StartWave();
+}
+
+void AMainGameState::WaveClear()
+{
+	for (AActor* Actor : SpawnedItems)
+	{
+		if (ABaseItem* Item = Cast<ABaseItem>(Actor))
+		{
+			Item->Destroy();
+		}
+	}
+}
+
+void AMainGameState::EndWave()
+{
+	WaveClear();
+	CurrentWaveIndex++;
 }
 
 void AMainGameState::OnLevelTimeUp()
@@ -115,13 +157,16 @@ void AMainGameState::OnCoinClamped()
 
 	if (SpawnedCoinCount > 0 && CollectedCoinCount >= SpawnedCoinCount)
 	{
-		EndLevel();
+		EndWave();
+		StartWave();
 	}
 }
 
 void AMainGameState::EndLevel()
 {
-	GetWorldTimerManager().ClearTimer(LevelTimerHandle);
+	GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+
+	CurrentWaveIndex = 0;
 
 	if (UGameInstance* GameInstance = GetGameInstance())
 	{
@@ -163,7 +208,7 @@ void AMainGameState::UpdateHUD()
 				
 				if (UTextBlock* TimeText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Time"))))
 				{
-					float RemainingTime = GetWorldTimerManager().GetTimerRemaining(LevelTimerHandle);
+					float RemainingTime = GetWorldTimerManager().GetTimerRemaining(WaveTimerHandle);
 					TimeText->SetText(FText::FromString(FString::Printf(TEXT("Time: %.1f"), RemainingTime)));
 				}
 				if (UTextBlock* ScoreText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Score"))))
