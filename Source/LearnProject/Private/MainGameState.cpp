@@ -239,8 +239,7 @@ void AMainGameState::OnGameOver()
 		if (AMainPlayerController* MainPlayerController = Cast< AMainPlayerController>(PlayerController))
 		{
 			MainPlayerController->SetPause(true);
-			MainPlayerController->ShowMainMenu(true);
-
+			MainPlayerController->ShowGameOver();
 		}
 	}
 }

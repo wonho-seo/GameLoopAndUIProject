@@ -18,7 +18,7 @@ AMainPlayerController::AMainPlayerController()
     HUDWidgetClass(nullptr),
     HUDWidgetInstance(nullptr),
     MainMenuWidgetClass(nullptr),
-    MainMenuWidgetInstance(nullptr)
+    VisualMenuWidgetInstance(nullptr)
 {
 }
 
@@ -34,10 +34,10 @@ void AMainPlayerController::ShowGameHUD()
         HUDWidgetInstance->RemoveFromParent();
         HUDWidgetInstance = nullptr;
     }
-    if (MainMenuWidgetInstance)
+    if (VisualMenuWidgetInstance)
     {
-        MainMenuWidgetInstance->RemoveFromParent();
-        MainMenuWidgetInstance = nullptr;
+        VisualMenuWidgetInstance->RemoveFromParent();
+        VisualMenuWidgetInstance = nullptr;
     }
 
     if (HUDWidgetClass)
@@ -60,75 +60,106 @@ void AMainPlayerController::ShowGameHUD()
     }
 }
 
-void AMainPlayerController::ShowMainMenu(bool bIsRestart)
+void AMainPlayerController::ShowMainMenu()
 {
     if (HUDWidgetInstance)
     {
         HUDWidgetInstance->RemoveFromParent();
         HUDWidgetInstance = nullptr;
     }
-    if (MainMenuWidgetInstance)
+    if (VisualMenuWidgetInstance)
     {
-        MainMenuWidgetInstance->RemoveFromParent();
-        MainMenuWidgetInstance = nullptr;
+        VisualMenuWidgetInstance->RemoveFromParent();
+        VisualMenuWidgetInstance = nullptr;
     }
 
     if (MainMenuWidgetClass)
     {
-        MainMenuWidgetInstance = CreateWidget<UUserWidget>(this, MainMenuWidgetClass);
-        if (MainMenuWidgetInstance)
+        VisualMenuWidgetInstance = CreateWidget<UUserWidget>(this, MainMenuWidgetClass);
+        if (VisualMenuWidgetInstance)
         {
-            MainMenuWidgetInstance->AddToViewport();
+            VisualMenuWidgetInstance->AddToViewport();
 
             bShowMouseCursor = true;
             SetInputMode(FInputModeUIOnly());
-        }
 
-        if (UTextBlock* ButtonText = Cast<UTextBlock>(MainMenuWidgetInstance->GetWidgetFromName(TEXT("StartButtonText"))))
-        {
-            if (bIsRestart)
-            {
-                ButtonText->SetText(FText::FromString(TEXT("Restart")));
-
-            }
-            else
-            {
-                ButtonText->SetText(FText::FromString(TEXT("Start")));
-            }
-        }
-
-        if (bIsRestart)
-        {
-            UFunction* PlayAnimFunc = MainMenuWidgetInstance->FindFunction(FName("PlayGameOverAnim"));
+            UFunction* PlayAnimFunc = VisualMenuWidgetInstance->FindFunction(FName("PlayTitleAnim"));
             if (PlayAnimFunc)
             {
-                MainMenuWidgetInstance->ProcessEvent(PlayAnimFunc, nullptr);
-            }
-
-            if (UTextBlock* TotalScoreText = Cast<UTextBlock>(MainMenuWidgetInstance->GetWidgetFromName("TotalScoreText")))
-            {
-                if (UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(UGameplayStatics::GetGameInstance(this)))
-                {
-                    TotalScoreText->SetText(FText::FromString(
-                        FString::Printf(TEXT("Total Score: %d"), MainGameInstance->TotalScore)
-                    ));
-                }
+                VisualMenuWidgetInstance->ProcessEvent(PlayAnimFunc, nullptr);
             }
         }
     }
 }
 
-void AMainPlayerController::StartGame()
+void AMainPlayerController::ShowSelectLevel()
+{
+    if (HUDWidgetInstance)
+    {
+        HUDWidgetInstance->RemoveFromParent();
+        HUDWidgetInstance = nullptr;
+    }
+    if (VisualMenuWidgetInstance)
+    {
+        VisualMenuWidgetInstance->RemoveFromParent();
+        VisualMenuWidgetInstance = nullptr;
+    }
+
+    if (SelectLevelMenuWidgetClass)
+    {
+        VisualMenuWidgetInstance = CreateWidget<UUserWidget>(this, SelectLevelMenuWidgetClass);
+
+        if (VisualMenuWidgetInstance)
+        {
+            VisualMenuWidgetInstance->AddToViewport();
+
+            bShowMouseCursor = true;
+            SetInputMode(FInputModeUIOnly());
+        }
+    }
+}
+void AMainPlayerController::ShowGameOver()
+{
+    if (HUDWidgetInstance)
+    {
+        HUDWidgetInstance->RemoveFromParent();
+        HUDWidgetInstance = nullptr;
+    }
+    if (VisualMenuWidgetInstance)
+    {
+        VisualMenuWidgetInstance->RemoveFromParent();
+        VisualMenuWidgetInstance = nullptr;
+    }
+
+    if (GameOverMenuWidgetClass)
+    {
+        VisualMenuWidgetInstance = CreateWidget<UUserWidget>(this, GameOverMenuWidgetClass);
+
+        if (VisualMenuWidgetInstance)
+        {
+            VisualMenuWidgetInstance->AddToViewport();
+
+            bShowMouseCursor = true;
+            SetInputMode(FInputModeUIOnly());
+
+            UFunction* PlayAnimFunc = VisualMenuWidgetInstance->FindFunction(FName("PlayGameOverAnim"));
+            if (PlayAnimFunc)
+            {
+                VisualMenuWidgetInstance->ProcessEvent(PlayAnimFunc, nullptr);
+            }
+        }
+    }
+}
+void AMainPlayerController::StartGame(int32 CurrentLevel)
 {
     if (UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(UGameplayStatics::GetGameInstance(this)))
     {
-        MainGameInstance->CurrentLevelIndex = 0;
+        MainGameInstance->CurrentLevelIndex = CurrentLevel;
         MainGameInstance->TotalScore = 0; 
     }
 
     UGameplayStatics::OpenLevel(GetWorld(), FName("BasicLevel"));
     SetPause(false);
-
 }
 
 void AMainPlayerController::BeginPlay()
@@ -149,6 +180,6 @@ void AMainPlayerController::BeginPlay()
     FString CurrentMapName = GetWorld()->GetMapName();
     if (CurrentMapName.Contains("MenuLevel"))
     {
-        ShowMainMenu(false);
+        ShowMainMenu();
     }
 }

@@ -41,8 +41,12 @@ public:
 	UUserWidget* HUDWidgetInstance;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
 	TSubclassOf<UUserWidget> MainMenuWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	TSubclassOf<UUserWidget> SelectLevelMenuWidgetClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	TSubclassOf<UUserWidget> GameOverMenuWidgetClass;
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Menu")
-	UUserWidget* MainMenuWidgetInstance;
+	UUserWidget* VisualMenuWidgetInstance;
 
 	UFUNCTION(BlueprintPure, Category = "HUD")
 	UUserWidget* GetHUDWidget() const;
@@ -51,9 +55,13 @@ public:
 	void ShowGameHUD();
 
 	UFUNCTION(BlueprintCallable, Category = "Menu")
-	void ShowMainMenu(bool bIsRestart);
+	void ShowMainMenu();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void ShowSelectLevel();
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void ShowGameOver();
 
 	UFUNCTION(BlueprintCallable, Category = "Menu")
-	void StartGame();
+	void StartGame(int32 CurrentLevel);
 	virtual void BeginPlay() override;
 };
