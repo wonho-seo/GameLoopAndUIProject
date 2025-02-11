@@ -24,6 +24,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void AddHealth(float Amount);
+
+	void AddSlowSpeed(float Rate, float Time);
+	UFUNCTION()
+	void SlowSpeedRollBack(float Rate);
+
+	void ReverseControl(float Time);
+	void ConverseControl();
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -33,7 +40,9 @@ protected:
 	UCameraComponent* CameraComp;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-	UWidgetComponent* OverheadWidget;
+	UWidgetComponent* OverheadHpWidget;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	UWidgetComponent* OverheadDebuffWidget;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float NormalSpeed;
@@ -41,7 +50,12 @@ protected:
 	float SprintSpeedMultiplier;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	float SprintSpeed;
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float TempSpeedRate;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float SlowCount;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool IsReverseControl;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Health")
 	float MaxHealth;
@@ -71,4 +85,9 @@ protected:
 
 	void OnDeath();
 	void UpdateOverheadHp();
+	void UpdateOverheadDeBuff();
+	FTimerHandle SlowTimerHandler;
+	FTimerDelegate SlowTimerDelegete;
+
+	FTimerHandle ReverseTimerHandler;
 };

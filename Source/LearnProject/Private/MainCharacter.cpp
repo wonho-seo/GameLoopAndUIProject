@@ -25,13 +25,20 @@ AMainCharacter::AMainCharacter()
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
     CameraComp->bUsePawnControlRotation = false;
 
-    OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
-    OverheadWidget->SetupAttachment(GetMesh());
-    OverheadWidget->SetWidgetSpace(EWidgetSpace::Screen);
+    OverheadHpWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget1"));
+    OverheadHpWidget->SetupAttachment(GetMesh());
+    OverheadHpWidget->SetWidgetSpace(EWidgetSpace::Screen);
+
+    OverheadDebuffWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget2"));
+    OverheadDebuffWidget->SetupAttachment(GetMesh());
+    OverheadDebuffWidget->SetWidgetSpace(EWidgetSpace::Screen);
 
     NormalSpeed = 600.0f;
     SprintSpeedMultiplier = 1.5f;
     SprintSpeed = NormalSpeed * SprintSpeedMultiplier;
+    TempSpeedRate = 1.0f;
+    SlowCount = 0;
+    SlowTimerDelegete = nullptr;
 
     GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
     MaxHealth = 100;
@@ -133,7 +140,11 @@ void AMainCharacter::Move(const FInputActionValue& value)
 {
     if (!Controller) return;
 
-    const FVector2D MoveInput = value.Get<FVector2D>();
+    FVector2D MoveInput = value.Get<FVector2D>();
+    if (IsReverseControl)
+    {
+        MoveInput = MoveInput * -1.0f;
+    }
 
     if (!FMath::IsNearlyZero(MoveInput.X))
     {
@@ -174,7 +185,7 @@ void AMainCharacter::StartSprint(const FInputActionValue& value)
 {
     if (GetCharacterMovement())
     {
-        GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = SprintSpeed * TempSpeedRate;
     }
 }
 
@@ -182,7 +193,7 @@ void AMainCharacter::StopSprint(const FInputActionValue& value)
 {
     if (GetCharacterMovement())
     {
-        GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
+        GetCharacterMovement()->MaxWalkSpeed = NormalSpeed * TempSpeedRate;
     }
 }
 
@@ -196,15 +207,56 @@ void AMainCharacter::OnDeath()
 
 void AMainCharacter::UpdateOverheadHp()
 {
-    if (!OverheadWidget) return;
+    if (!OverheadHpWidget) return;
 
-    if (UUserWidget* OverheadWidgetInstance = OverheadWidget->GetUserWidgetObject())
+    if (UUserWidget* OverheadWidgetInstance = OverheadHpWidget->GetUserWidgetObject())
     {
         if (UTextBlock* HPText = Cast<UTextBlock>(OverheadWidgetInstance->GetWidgetFromName(TEXT("OverHeadHp"))))
         {
-            HPText->SetText(FText::FromString(FString::Printf(TEXT("%.0f / %.0f"), Health, MaxHealth)));
+                HPText->SetText(FText::FromString(FString::Printf(TEXT("%.0f / %.0f"), Health, MaxHealth)));
+        }
+
+    }
+    
+}
+
+void AMainCharacter::UpdateOverheadDeBuff()
+{
+
+    if (!OverheadDebuffWidget) return;
+
+    if (UUserWidget* OverheadWidgetInstance = OverheadDebuffWidget->GetUserWidgetObject())
+    {
+        if (UTextBlock* DeBuffText = Cast<UTextBlock>(OverheadWidgetInstance->GetWidgetFromName(TEXT("OverHeadDeBuff"))))
+        {
+            FString DisPlayText = "";
+            float Time = 0.0f;
+
+            if (SlowCount > 0)
+            {
+                if (GetWorld())
+                {
+                    Time = GetWorld()->GetTimerManager().GetTimerRemaining(SlowTimerHandler);
+                }
+
+                DisPlayText += FString::Printf(TEXT("%.0fSec Slow overlap : &d!"), Time, SlowCount);
+
+            }
+            if (IsReverseControl)
+            {
+                if (GetWorld())
+                {
+                    Time = GetWorld()->GetTimerManager().GetTimerRemaining(ReverseTimerHandler);
+                }
+
+                DisPlayText += FString::Printf(TEXT("%.0fSec ReverseKey!\n"), Time);
+
+            }
+
+            DeBuffText->SetText(FText::FromString(DisPlayText));
         }
     }
+
 }
 
 float AMainCharacter::GetHealth() const
@@ -216,5 +268,54 @@ void AMainCharacter::AddHealth(float Amount)
 {
     Health = FMath::Clamp(Health + Amount, 0.0f, MaxHealth);
     UpdateOverheadHp();
+}
+
+void AMainCharacter::AddSlowSpeed(float Rate, float Time)
+{
+    
+    SlowTimerDelegete.BindUFunction(this, FName("SlowSpeedRollBack"), Rate);
+    SlowCount++;
+    TempSpeedRate -= Rate;
+    GetCharacterMovement()->MaxWalkSpeed = GetCharacterMovement()->MaxWalkSpeed * TempSpeedRate;
+    GetWorld()->GetTimerManager().SetTimer(
+        SlowTimerHandler,
+        SlowTimerDelegete,
+        Time,
+        false);
+    UpdateOverheadDeBuff();
+}
+
+void AMainCharacter::SlowSpeedRollBack(float Rate)
+{
+    SlowCount = 0;
+    TempSpeedRate = 1.0f;
+    GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
+    UpdateOverheadDeBuff();
+
+}
+
+void AMainCharacter::ReverseControl(float Time)
+{
+    IsReverseControl = true;
+
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            ReverseTimerHandler,
+            this,
+            &AMainCharacter::ConverseControl,
+            Time,
+            false
+        );
+    }
+    UpdateOverheadDeBuff();
+
+}
+
+void AMainCharacter::ConverseControl()
+{
+    IsReverseControl = false;
+    UpdateOverheadDeBuff();
+
 }
 
