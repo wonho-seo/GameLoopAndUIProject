@@ -165,7 +165,7 @@ void AMainGameState::StartWave()
 
 				if (SpawnedCoinCount == 0)
 				{
-					*SpawnedActors.begin() = SpawnVolume->SpawnItem(ACoinItem::StaticClass());
+					*SpawnedActors.begin() = SpawnVolume->SpawnItemInZone(ACoinItem::StaticClass());
 					SpawnedCoinCount++;
 				}
 			}

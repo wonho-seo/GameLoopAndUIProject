@@ -99,36 +99,11 @@ AActor* ASpawnVolume::SpawnItemInZone(TSubclassOf<AActor> ItemClass)
 		ZoneIndex = 0;
 	}
 	FVector Temp = GetRandomPointInZone(ZoneIndex);
-	UE_LOG(LogTemp, Warning, TEXT("Index : %d, ZoneIndex : %d, Position : %s"), ZoneIndex, Zones[ZoneIndex], *Temp.ToString());
 	return GetWorld()->SpawnActor<AActor>(
 		ItemClass,
 		GetRandomPointInZone(Zones[ZoneIndex++]),
 		FRotator::ZeroRotator
 	);
-}
-
-FVector ASpawnVolume::GetRandomPointInVolume() const
-{
-	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
-	FVector BoxOrigin = SpawningBox->GetComponentLocation();
-	
-	return BoxOrigin + FVector(
-		FMath::FRandRange(-BoxExtent.X, BoxExtent.X),
-		FMath::FRandRange(-BoxExtent.Y, BoxExtent.Y),
-		FMath::FRandRange(-BoxExtent.Z, BoxExtent.Z)
-	);
-}
-
-AActor* ASpawnVolume::SpawnRandomItem()
-{
-	if (FItemSpawnRow* SelectedRow = GetRandomItem())
-	{
-		if (UClass* ActualClass = SelectedRow->ItemClass.Get())
-		{
-			return SpawnItem(ActualClass);
-		}
-	}
-	return nullptr;
 }
 
 FItemSpawnRow* ASpawnVolume::GetRandomItem() const
@@ -164,16 +139,6 @@ FItemSpawnRow* ASpawnVolume::GetRandomItem() const
 	return nullptr;
 }
 
-AActor* ASpawnVolume::SpawnItem(TSubclassOf<AActor> ItemClass)
-{
-	if (!ItemClass) return nullptr;
-
-	return GetWorld()->SpawnActor<AActor>(
-		ItemClass,
-		GetRandomPointInVolume(),
-		FRotator::ZeroRotator
-	);
-}
 
 FVector ASpawnVolume::GetRandomRoundPointInVolume() const
 {

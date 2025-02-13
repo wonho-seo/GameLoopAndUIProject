@@ -29,11 +29,8 @@ public:
 	int32 ZoneRowCount;
 
 
-	UFUNCTION(BlueprintCallable, Category = "Spawning")
-	AActor* SpawnRandomItem();
 	
 	FItemSpawnRow* GetRandomItem() const;
-	AActor* SpawnItem(TSubclassOf<AActor> ItemClass);
 	FVector GetRandomRoundPointInVolume() const;
 	AActor* SpawnObstacle(TSubclassOf<AActor> ObstacleClass);
 	void ResizeZone(int32 Size);
@@ -41,7 +38,6 @@ public:
 	FVector GetRandomPointInZone(int32 ZoneIndex);
 	AActor* SpawnRandomItemInZone();
 	AActor* SpawnItemInZone(TSubclassOf<AActor> ItemClass);
-	FVector GetRandomPointInVolume() const;
 
 	TArray<int32> Zones;
 	FVector ZoneRange;
