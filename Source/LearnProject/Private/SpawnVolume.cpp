@@ -28,7 +28,6 @@ FVector ASpawnVolume::GetRandomPointInVolume() const
 		FMath::FRandRange(-BoxExtent.Y, BoxExtent.Y),
 		FMath::FRandRange(-BoxExtent.Z, BoxExtent.Z)
 	);
-
 }
 
 AActor* ASpawnVolume::SpawnRandomItem()
@@ -87,5 +86,26 @@ AActor* ASpawnVolume::SpawnItem(TSubclassOf<AActor> ItemClass)
 	);
 }
 
+FVector ASpawnVolume::GetRandomRoundPointInVolume() const
+{
+	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
+	FVector BoxOrigin = SpawningBox->GetComponentLocation();
 
+	return BoxOrigin + FVector(
+		FMath::FRandRange(-BoxExtent.X, BoxExtent.X),
+		FMath::FRandRange(-BoxExtent.Y, BoxExtent.Y),
+		-BoxExtent.Z
+	);
+
+}
+AActor* ASpawnVolume::SpawnObstacle(TSubclassOf<AActor> ObstacleClass)
+{
+	if (!ObstacleClass) return nullptr;
+
+	return GetWorld()->SpawnActor<AActor>(
+		ObstacleClass,
+		GetRandomRoundPointInVolume(),
+		FRotator::ZeroRotator
+	);
+}
 

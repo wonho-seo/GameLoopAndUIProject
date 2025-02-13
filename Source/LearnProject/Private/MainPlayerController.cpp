@@ -131,6 +131,7 @@ void AMainPlayerController::ShowGameOver()
         VisualMenuWidgetInstance = nullptr;
     }
 
+
     if (GameOverMenuWidgetClass)
     {
         VisualMenuWidgetInstance = CreateWidget<UUserWidget>(this, GameOverMenuWidgetClass);
@@ -146,6 +147,15 @@ void AMainPlayerController::ShowGameOver()
             if (PlayAnimFunc)
             {
                 VisualMenuWidgetInstance->ProcessEvent(PlayAnimFunc, nullptr);
+            }
+
+            if (UTextBlock * ScoreText = Cast<UTextBlock>(VisualMenuWidgetInstance->GetWidgetFromName(TEXT("TotalScoreText"))))
+            {
+
+                if (UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(UGameplayStatics::GetGameInstance(this)))
+                {
+                    ScoreText->SetText(FText::FromString(FString::Printf(TEXT("Total Score: %d"), MainGameInstance->TotalScore)));
+                }
             }
         }
     }

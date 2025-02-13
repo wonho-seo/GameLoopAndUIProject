@@ -19,6 +19,8 @@ AMainGameState::AMainGameState()
 	CurrentLevelIndex = 0;
 	MaxLevels = 3;
 	CurrentWaveIndex = 0;
+	IsAppearThunder = false;
+	IsAppearSpike = false;
 }
 
 void AMainGameState::BeginPlay()
@@ -54,6 +56,24 @@ void AMainGameState::AddScore(int32 Amount)
 	}
 }
 
+void AMainGameState::OnRestartLevel()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		if (UMainGameInstance* MainGameInstance = Cast<UMainGameInstance>(GameInstance))
+		{
+			MainGameInstance->TotalScore = 0;
+			WaveClear();
+			if (CurrentLevelIndex >= MaxLevels)
+			{
+				CurrentLevelIndex = MaxLevels - 1;
+			}
+			CurrentLevelIndex--;
+			EndLevel();
+		}
+	}
+}
+
 void AMainGameState::StartLevel()
 {
 	if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
@@ -81,10 +101,13 @@ void AMainGameState::StartWave()
 {
 	SpawnedCoinCount = 0;
 	CollectedCoinCount = 0;
+	IsAppearThunder = false;
+	IsAppearSpike = false;
 
 	TArray<FWaveRow*> WaveRows;
 	const FString ContextString(TEXT("WaveContexts"));
 	WaveDataTable->GetAllRows(ContextString, WaveRows);
+	SpawnedActors.Empty();
 
 	TArray<AActor*> FoundVolumes;
 	UGameplayStatics::GetAllActorsOfClass(GetWorld(), ASpawnVolume::StaticClass(), FoundVolumes);
@@ -94,19 +117,56 @@ void AMainGameState::StartWave()
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, FString::Printf(TEXT("Wave: %d"), CurrentWaveIndex));
 		int32 ItemToSpawn = WaveRows[CurrentWaveIndex]->SpawnCount;
 		float WaveDuration = WaveRows[CurrentWaveIndex]->WaveDuration;
-		for (int32 i = 0; i < ItemToSpawn; i++)
+		UDataTable* ObstacleSpawnTable = WaveRows[CurrentWaveIndex]->ObstacleSpawnTables;
+
+		if (FoundVolumes.Num() > 0)
 		{
-			if (FoundVolumes.Num() > 0)
+			if (ASpawnVolume* SpawnVolume = Cast<ASpawnVolume>(FoundVolumes[0]))
 			{
-				ASpawnVolume* SpawnVolume = Cast<ASpawnVolume>(FoundVolumes[0]);
-				if (SpawnVolume)
+				if (ObstacleSpawnTable)
+				{
+					TArray<FObstacleSapwnRow*> ObstacleSpawnRows;
+					const FString ObstacleContextString(TEXT("ObstacleContexts"));
+					ObstacleSpawnTable->GetAllRows(ObstacleContextString, ObstacleSpawnRows);
+
+					for (FObstacleSapwnRow* ObstacleSpawnRow : ObstacleSpawnRows)
+					{
+						for (int32 SpawnCount = 0; SpawnCount < ObstacleSpawnRow->SpawnCount; SpawnCount++)
+						{
+							AActor* SpawnedObstacle = SpawnVolume->SpawnObstacle(ObstacleSpawnRow->ObstacleClass);
+							if (SpawnedObstacle)
+							{
+								SpawnedActors.Add(SpawnedObstacle);
+								IsAppearSpike = true;
+							}
+						}
+					}
+				}
+
+				if (CurrentWaveIndex == 2)
+				{
+					GetWorld()->GetTimerManager().SetTimer(
+						ThunderTimerHandle,
+						this,
+						&AMainGameState::OnThunderAttack,
+						3.0f,
+						true
+					);
+				}
+				for (int32 i = 0; i < ItemToSpawn; i++)
 				{
 					AActor* SpawnedActor = SpawnVolume->SpawnRandomItem();
 					if (SpawnedActor && SpawnedActor->IsA(ACoinItem::StaticClass()))
 					{
 						SpawnedCoinCount++;
 					}
-					SpawnedItems.Add(SpawnedActor);
+					SpawnedActors.Add(SpawnedActor);
+				}
+
+				if (SpawnedCoinCount == 0)
+				{
+					*SpawnedActors.begin() = SpawnVolume->SpawnItem(ACoinItem::StaticClass());
+					SpawnedCoinCount++;
 				}
 			}
 		}
@@ -132,12 +192,31 @@ void AMainGameState::OnWaveTimeUp()
 
 void AMainGameState::WaveClear()
 {
-	for (AActor* Actor : SpawnedItems)
+
+	if (GetWorldTimerManager().IsTimerActive(WaveTimerHandle))
 	{
+		GetWorldTimerManager().ClearTimer(WaveTimerHandle);
+	}
+
+	for (AActor* Actor : SpawnedActors)
+	{
+		//if (GetWorld())
+		//{
+		//	GetWorld()->GetTimerManager().ClearAllTimersForObject(Actor);
+		//}
 		if (ABaseItem* Item = Cast<ABaseItem>(Actor))
 		{
 			Item->Destroy();
 		}
+		if (ABaseObstacle* Obstacle = Cast<ABaseObstacle>(Actor))
+		{
+			Obstacle->Destroy();
+		}
+	}
+
+	if (GetWorld() && GetWorld()->GetTimerManager().IsTimerActive(ThunderTimerHandle))
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ThunderTimerHandle);
 	}
 }
 
@@ -164,8 +243,6 @@ void AMainGameState::OnCoinClamped()
 
 void AMainGameState::EndLevel()
 {
-	GetWorldTimerManager().ClearTimer(WaveTimerHandle);
-
 	CurrentWaveIndex = 0;
 
 	if (UGameInstance* GameInstance = GetGameInstance())
@@ -224,8 +301,34 @@ void AMainGameState::UpdateHUD()
 				}
 				if (UTextBlock* LevelIndexText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("Level"))))
 				{
-					LevelIndexText->SetText(FText::FromString(FString::Printf(TEXT("Level: %d"), CurrentLevelIndex + 1)));
+					LevelIndexText->SetText(FText::FromString(FString::Printf(TEXT("Level: %d - %d"), CurrentLevelIndex + 1, CurrentWaveIndex + 1)));
 
+				}
+				if (UTextBlock* SpikeText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("SpikeText"))))
+				{
+					if (IsAppearSpike)
+					{
+						SpikeText->SetVisibility(ESlateVisibility::Visible);
+					}
+					else
+					{
+						SpikeText->SetVisibility(ESlateVisibility::Hidden);
+
+					}
+
+				}
+				if (UTextBlock* ThunderText = Cast<UTextBlock>(HUDWidget->GetWidgetFromName(TEXT("ThunderText"))))
+				{
+					if(SpawnedThunder && SpawnedThunder->IsPendingKillPending())
+					{
+						ThunderText->SetVisibility(ESlateVisibility::Hidden);
+						SpawnedThunder = nullptr;
+					}
+					else if (SpawnedThunder)
+					{
+						ThunderText->SetVisibility(ESlateVisibility::Visible);
+
+					}
 				}
 			}
 		}
@@ -240,6 +343,24 @@ void AMainGameState::OnGameOver()
 		{
 			MainPlayerController->SetPause(true);
 			MainPlayerController->ShowGameOver();
+		}
+	}
+}
+
+void AMainGameState::OnThunderAttack()
+{
+	if (GetWorld() && ThunderActor && FMath::RandBool())
+	{
+		if (APlayerController* PlayerController = GetWorld()->GetFirstPlayerController())
+		{
+			if (APawn* Player = PlayerController->GetPawn())
+			{
+				SpawnedThunder = GetWorld()->SpawnActor<AThunderActor>(
+					ThunderActor,
+					Player->GetActorLocation(),
+					FRotator::ZeroRotator
+				);
+			}
 		}
 	}
 }

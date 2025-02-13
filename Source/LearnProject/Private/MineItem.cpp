@@ -82,7 +82,10 @@ void AMineItem::Explode()
 			DestroyParticleTimerHandle,
 			[Particle]()
 			{
-				Particle->DestroyComponent();
+				if (Particle)
+				{
+					Particle->DestroyComponent();
+				}
 			},
 			2.0f,
 			false

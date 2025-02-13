@@ -3,26 +3,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BaseObstacle.h"
 #include "Engine/DataTable.h"
-#include "ObstacleSapwnRow.h"
-#include "WaveRow.generated.h"
+#include "ObstacleSapwnRow.generated.h"
 /**
  * 
  */
-
 USTRUCT(BlueprintType)
-struct FWaveRow : public FTableRowBase
+struct FObstacleSapwnRow : public FTableRowBase
 {
 	GENERATED_BODY()
 
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float WaveDuration;
-
+	FName ObstacleName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<ABaseObstacle> ObstacleClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 SpawnCount;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UDataTable* ObstacleSpawnTables;
 };

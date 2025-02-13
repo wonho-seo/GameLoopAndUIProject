@@ -27,10 +27,15 @@ public:
 
 	void AddSlowSpeed(float Rate, float Time);
 	UFUNCTION()
-	void SlowSpeedRollBack(float Rate);
+	void SlowSpeedRollBack();
 
 	void ReverseControl(float Time);
 	void ConverseControl();
+
+	FTimerHandle GetSlowTimerHandler();
+	void SetSlowTimerHandler(FTimerHandle SlowTimerHandler2);
+
+
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -86,8 +91,10 @@ protected:
 	void OnDeath();
 	void UpdateOverheadHp();
 	void UpdateOverheadDeBuff();
+	void StartDisplayDeBuff();
+
+	FTimerHandle DebuffDisplayHandler;
 	FTimerHandle SlowTimerHandler;
-	FTimerDelegate SlowTimerDelegete;
 
 	FTimerHandle ReverseTimerHandler;
 };

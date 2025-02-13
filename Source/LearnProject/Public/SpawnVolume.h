@@ -30,5 +30,7 @@ public:
 	
 	FItemSpawnRow* GetRandomItem() const;
 	AActor* SpawnItem(TSubclassOf<AActor> ItemClass);
+	FVector GetRandomRoundPointInVolume() const;
+	AActor* SpawnObstacle(TSubclassOf<AActor> ObstacleClass);
 	FVector GetRandomPointInVolume() const;
 };

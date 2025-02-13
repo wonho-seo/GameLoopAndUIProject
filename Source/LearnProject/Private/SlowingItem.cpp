@@ -17,6 +17,18 @@ void ASlowingItem::ActivateItem(AActor* Activator)
 		if (AMainCharacter* MainCharacter = Cast<AMainCharacter>(Activator))
 		{
 			MainCharacter->AddSlowSpeed(SlowingSpeedRate, SlowingTime);
+			if (GetWorld())
+			{
+				FTimerHandle TempHandler = MainCharacter->GetSlowTimerHandler();
+				GetWorld()->GetTimerManager().SetTimer(
+					TempHandler,
+					MainCharacter,
+					&AMainCharacter::SlowSpeedRollBack,
+					SlowingTime,
+					false
+				);
+				MainCharacter->SetSlowTimerHandler(TempHandler);
+			}
 		}
 
 		DestroyItem();

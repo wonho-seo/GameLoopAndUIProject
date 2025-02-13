@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
+#include "ThunderActor.h"
 #include "MainGameState.generated.h"
-
 /**
  * 
  */
@@ -33,6 +33,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave")
 	UDataTable* WaveDataTable;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave")
+	TSubclassOf<AThunderActor> ThunderActor;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave")
 	int32 CurrentWaveIndex;
 
@@ -41,6 +43,7 @@ public:
 
 	FTimerHandle WaveTimerHandle;
 	FTimerHandle HUDUPdateTimerHandle;
+	FTimerHandle ThunderTimerHandle;
 	UFUNCTION(BlueprintPure, Category = "Score")
 	int32 GetScore() const;
 
@@ -49,6 +52,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Level")
 	void OnGameOver();
 
+	UFUNCTION(BlueprintCallable, Category = "Thunder")
+	void OnThunderAttack();
+
+	UFUNCTION(BlueprintCallable, Category = "Level")
+	void OnRestartLevel();
 	void StartLevel();
 	void WaveClear();
 	void OnLevelTimeUp();
@@ -61,5 +69,9 @@ public:
 
 	void OnWaveTimeUp();
 private:
-	TArray<AActor*> SpawnedItems;
+	TArray<AActor*> SpawnedActors;
+	bool IsAppearSpike;
+	bool IsAppearThunder;
+	AThunderActor* SpawnedThunder;
+
 };
