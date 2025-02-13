@@ -155,7 +155,7 @@ void AMainGameState::StartWave()
 				}
 				for (int32 i = 0; i < ItemToSpawn; i++)
 				{
-					AActor* SpawnedActor = SpawnVolume->SpawnRandomItem();
+					AActor* SpawnedActor = SpawnVolume->SpawnRandomItemInZone();
 					if (SpawnedActor && SpawnedActor->IsA(ACoinItem::StaticClass()))
 					{
 						SpawnedCoinCount++;

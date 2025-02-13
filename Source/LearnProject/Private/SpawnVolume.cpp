@@ -16,13 +16,102 @@ ASpawnVolume::ASpawnVolume()
 	SpawningBox->SetupAttachment(Scene);
 
 	ItemDataTable = nullptr;
+	ZoneRowCount = 0;
+	ZoneIndex = 0;
+}
+
+void ASpawnVolume::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ResizeZone(ZoneRowCount * ZoneRowCount);
+	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
+
+	ZoneRange = FVector(
+		BoxExtent.X / ZoneRowCount,
+		BoxExtent.Y / ZoneRowCount,
+		0);
+
+}
+void ASpawnVolume::SortZones(int32 StartIndex)
+{
+	for (; StartIndex < Zones.Num(); StartIndex++)
+	{
+		if (StartIndex == Zones[StartIndex])
+		{
+			int SwapIndex = FMath::RandRange(0, Zones.Num() - 1);
+			Zones.Swap(StartIndex, SwapIndex);
+		}
+	}
+}
+
+void ASpawnVolume::ResizeZone(int32 Size)
+{
+	if (Size > Zones.Num())
+	{
+		int StartIndex = Zones.Num();
+		Zones.SetNum(Size);
+		for (int Index = StartIndex; Index < Zones.Num(); Index++)
+		{
+			Zones[Index] = Index;
+		}
+		SortZones(StartIndex);
+	}
+
+}
+
+FVector ASpawnVolume::GetRandomZoneInVolume(int32 ZonesIndex)
+{
+	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
+	FVector BoxOrigin = SpawningBox->GetComponentLocation() - FVector(BoxExtent.X, BoxExtent.Y, 0) + ZoneRange;
+
+	return BoxOrigin + FVector(ZoneRange.X * 2 * (ZonesIndex % ZoneRowCount), ZoneRange.Y * 2 * (ZonesIndex / ZoneRowCount), 0);
+}
+
+FVector ASpawnVolume::GetRandomPointInZone(int32 ZonesIndex)
+{
+	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
+
+	return GetRandomZoneInVolume(ZonesIndex) + FVector(
+		FMath::FRandRange(-ZoneRange.X, ZoneRange.X),
+		FMath::FRandRange(-ZoneRange.Y, ZoneRange.Y),
+		FMath::FRandRange(-BoxExtent.Z, BoxExtent.Z)
+	);
+}
+
+AActor* ASpawnVolume::SpawnRandomItemInZone()
+{
+	if (FItemSpawnRow* SelectedRow = GetRandomItem())
+	{
+		if (UClass* ActualClass = SelectedRow->ItemClass.Get())
+		{
+			return SpawnItemInZone(ActualClass);
+		}
+	}
+	return nullptr;
+}
+AActor* ASpawnVolume::SpawnItemInZone(TSubclassOf<AActor> ItemClass)
+{
+	if (!ItemClass) return nullptr;
+
+	if (ZoneIndex >= Zones.Num())
+	{
+		ZoneIndex = 0;
+	}
+	FVector Temp = GetRandomPointInZone(ZoneIndex);
+	UE_LOG(LogTemp, Warning, TEXT("Index : %d, ZoneIndex : %d, Position : %s"), ZoneIndex, Zones[ZoneIndex], *Temp.ToString());
+	return GetWorld()->SpawnActor<AActor>(
+		ItemClass,
+		GetRandomPointInZone(Zones[ZoneIndex++]),
+		FRotator::ZeroRotator
+	);
 }
 
 FVector ASpawnVolume::GetRandomPointInVolume() const
 {
 	FVector BoxExtent = SpawningBox->GetScaledBoxExtent();
 	FVector BoxOrigin = SpawningBox->GetComponentLocation();
-
+	
 	return BoxOrigin + FVector(
 		FMath::FRandRange(-BoxExtent.X, BoxExtent.X),
 		FMath::FRandRange(-BoxExtent.Y, BoxExtent.Y),
